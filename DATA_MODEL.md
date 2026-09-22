@@ -1,69 +1,48 @@
-# DATA_MODEL.md
+# Data model
 
-## Purpose
+This document defines the domain data model for the Tanita tracker. It is primarily about what the application means and how it computes values, not about status tracking or implementation timelines.
 
-This document defines the application's data model before database implementation.
+Implementation note: the current V1 schema is implemented in Supabase and reflects the Tanita RD-545HR measurement set plus manual circumference fields. The application stores raw observation data and calculates derived metrics from it.
 
-The application tracks body composition measurements from a Tanita scale together with manually measured body circumferences.
+## 1. General principles
 
-The purpose of this document is to define:
+### 1.1 Raw data vs derived data
 
-* what data is stored
-* what data is entered by the user
-* what data comes from the Tanita scale
-* what data is manually measured
-* what values are calculated by the application
-* how missing values should behave
-* how changes between measurements should be calculated
+The application stores raw measurements whenever possible.
 
-This document defines the logical data model only.
+Examples of raw values:
 
-It does not define PostgreSQL tables, Supabase migrations, indexes, Row Level Security policies, React components, or API implementation.
+- weight_kg
+- body_fat_pct
+- muscle_mass_kg
+- waist_cm
+- hip_cm
+- heart_rate_bpm
 
----
+Derived values are not stored as permanent database columns when they can be recalculated from stored raw values.
 
-# 1. General Principles
+Examples:
 
-## 1.1 Raw data vs derived data
+- body fat mass in kilograms
+- waist-to-hip ratio
+- BMI
+- change from first non-null measurement
+- change from previous non-null measurement
 
-The application should store raw or observed data whenever possible.
+This ensures historical edits and deletions automatically affect derived results.
 
-Examples of raw data:
-
-* weight
-* body fat percentage
-* muscle mass
-* waist circumference
-* hip circumference
-* heart rate
-
-Derived values should normally not be stored permanently when they can be reliably recalculated from raw data.
-
-Examples of derived values:
-
-* body fat mass in kilograms
-* waist-to-hip ratio
-* change since first measurement
-* change since previous measurement
-
-This allows derived values to be recalculated if formulas or application logic change in the future.
-
----
-
-## 1.2 Units
+### 1.2 Units and value conventions
 
 The application uses metric units internally.
 
-Standard units:
+- mass and weight: kg
+- circumferences and height: cm
+- percentages: %
+- heart rate: bpm
+- basal metabolic rate: kcal
+- metabolic age: years
 
-* weight and body mass values: kg
-* circumferences and height: cm
-* percentages: %
-* heart rate: bpm
-* basal metabolic rate: kcal
-* metabolic age: years
-
-Percentages are stored as normal percentage values.
+Percentages are stored as percentage values, not fractions.
 
 Example:
 
@@ -71,31 +50,11 @@ Example:
 25.6
 ```
 
-represents:
+means 25.6%, not 0.256.
 
-```text
-25.6%
-```
+### 1.3 Dates and timestamps
 
-It should not be stored as:
-
-```text
-0.256
-```
-
----
-
-## 1.3 Dates
-
-Measurement timestamps must support date and time.
-
-The internal field should be:
-
-```text
-measured_at
-```
-
-Dates and timestamps should use ISO 8601 internally.
+Measurement timestamps use the field name measured_at and support a date and time value.
 
 Example:
 
@@ -103,21 +62,13 @@ Example:
 2026-09-11T08:30:00
 ```
 
-The initial user interface may only require the user to select a date.
+The database allows multiple measurements on the same day. A measurement history is ordered by measured_at, with id as a stable tie-breaker when timestamps match.
 
-If no time is entered by the user, the application may use a predefined default time or treat the measurement as date-only at the UI level.
+### 1.4 Missing values
 
-The database model should nevertheless allow multiple measurements on the same day.
+Most measurement values are nullable. A measurement may be incomplete.
 
----
-
-## 1.4 Missing values
-
-Most measurement values are optional.
-
-A user should be able to save a measurement even if not every Tanita or manual value was recorded.
-
-Missing values must be stored as null.
+Missing data is stored as NULL. Zero is not used to represent missing data.
 
 Example:
 
@@ -127,277 +78,227 @@ body_fat_pct = null
 waist_cm = null
 ```
 
-A missing measurement must never be represented using zero.
+This semantics is important because a real value of zero is distinct from an unrecorded value.
 
-Zero represents a real measured value.
+### 1.5 Metric-specific change logic
 
----
+The application computes changes using the most recent prior non-null value for the same metric, not the previous row in the table.
 
-# 2. Profile Data
+Example:
 
-Profile data represents information about the person being measured.
+Measurement A:
+- weight = 60
+- body fat = 30
 
-These values should not normally be repeated for every measurement.
+Measurement B:
+- weight = 59
+- body fat = NULL
 
----
+Measurement C:
+- weight = 58
+- body fat = 27
 
-## name
+For Measurement C:
 
-**Human-readable label:** Name
+- previous weight = 59
+- previous body fat = 30
 
-**Category:** Profile
+This also applies to the first measurement: the comparison is to the first non-null value for that metric, not the first row in the table.
 
-**Source:** User
+### 1.6 Percentage point deltas
 
-**Data type:** Text
+Percentage-based metrics such as body fat and body water use percentage-point changes.
 
-**Unit:** None
+Example:
 
-**Required:** Yes
+- 30% -> 25%
+- displayed delta: -5 pp
 
-**User-entered:** Yes
+Do not calculate a relative percent change for these metrics.
 
-**Description:**
+### 1.7 No average weekly variation
 
-Name used to identify the person whose measurements are being tracked.
+The application needs the following values for each relevant metric:
+
+- current value
+- change since first measurement
+- change since previous measurement
+
+It does not calculate average weekly variation as a primary output.
+
+## 2. Profile data
+
+Profile data describes the person whose measurements are being tracked. These values are usually stored once rather than repeated for every measurement.
+
+### name
+
+- Type: text
+- Required: yes
+- Meaning: human-readable profile identifier such as Monique or Nick
+
+### birth_date
+
+- Type: date
+- Required: no
+- Meaning: date of birth for optional age-based calculations
+
+### height_cm
+
+- Type: numeric
+- Required: no
+- Unit: cm
+- Meaning: the person's height, used for BMI calculations when available
+
+## 3. Measurement metadata
+
+Measurement metadata describes the context of a single recorded observation.
+
+### profile_id
+
+- Type: relationship to profiles
+- Required: yes
+- Meaning: the profile to which the measurement belongs
+
+### measured_at
+
+- Type: timestamp with time zone
+- Required: yes
+- Meaning: timestamp of the measurement
+
+### location_id
+
+- Type: relationship to locations
+- Required: yes
+- Meaning: the location where the measurement was taken
+
+### entry_method
+
+- Type: enum-like persisted value
+- Required: yes
+- Supported values in V1: manual, import
+- Meaning: how the measurement entered the application
+
+Notes:
+
+- manual means the measurement was entered manually, including values read from the Tanita RD-545HR
+- import means the record was imported from historical data such as Excel
+- entry_method is not a description of which body metrics are present within the row
+
+A single measurement may contain both Tanita values and manual circumference values while still using one entry_method.
+
+### notes
+
+- Type: text
+- Required: no
+- Meaning: optional commentary about the measurement
+
+## 4. Tanita RD-545HR V1 fields
+
+The confirmed device is the Tanita RD-545HR. The V1 schema includes the following Tanita fields as nullable raw values:
+
+- weight_kg
+- bmr_kcal
+- bone_mass_kg
+- visceral_fat_rating
+- body_fat_pct
+- muscle_mass_kg
+- muscle_quality_score
+- physique_rating
+- body_water_pct
+- heart_rate_bpm
+- metabolic_age
+
+These are all stored as raw observations. The application derives certain additional values from them.
+
+## 5. Manual circumference fields
+
+The V1 schema also includes manual circumference measurements:
+
+- abdomen_cm
+- flexed_arm_cm
+- arm_cm
+- waist_cm
+- hip_cm
+- thigh_cm
+
+These are user-entered circumference values and are nullable because a record may be incomplete.
+
+## 6. Derived metrics
+
+Derived values are calculated from raw stored data and are not stored as direct columns in the database.
 
 Examples:
 
-```text
-Monique
-Nick
-```
+- body_fat_mass_kg
+- waist_to_hip_ratio
+- BMI
+- change_from_first_measurement
+- change_from_previous_measurement
 
----
+### BMI
 
-## birth_date
+BMI is derived from:
 
-**Human-readable label:** Date of birth
+- weight_kg
+- profile height_cm
 
-**Category:** Profile
+It is not stored as a measurement field.
 
-**Source:** User
+### Body fat mass
 
-**Data type:** Date
+Body fat mass is derived from body fat percentage and weight when both are present.
 
-**Unit:** None
+### Waist-to-hip ratio
 
-**Required:** No
+Waist-to-hip ratio is derived from waist_cm and hip_cm when both are present.
 
-**User-entered:** Yes
+### Change calculations
 
-**Description:**
+For each metric in a profile history:
 
-The person's date of birth.
+- change from first measurement = current metric value - first non-null value for that metric
+- change from previous measurement = current metric value - most recent earlier non-null value for that metric
 
-This can be used to calculate age at the time of a measurement.
+These calculations are metric-specific and skip nulls for that same metric.
 
-The application should calculate chronological age dynamically instead of storing the person's current age as a profile value.
+## 7. Segmental metrics are outside V1
 
----
+The RD-545HR supports segmental body-fat, segmental muscle-mass, and related segmental values, but those are explicitly outside the current V1 scope. They are not part of the implemented measurement table and should not be added without a deliberate extension plan.
 
-## height_cm
+## 8. Location and profile relationships
 
-**Human-readable label:** Height
+- each measurement belongs to exactly one profile
+- each measurement belongs to exactly one location
+- a profile can have many measurements
+- a location can be referenced by many measurements
 
-**Category:** Profile
+Locations should be reusable records rather than free-form repeated text.
 
-**Source:** User
+## 9. Validation rules
 
-**Data type:** Decimal number
+The domain model requires:
 
-**Unit:** cm
+- a measurement may contain incomplete values
+- null is not zero
+- positive values are required when a numeric measurement is present
+- percentage metrics are constrained to a valid range such as 0 to 100
+- at least one body metric must be present in the row for a valid measurement
+- manual and imported measurement records are both valid using the supported entry_method values
 
-**Required:** No
+## 10. UI labels vs persisted values
 
-**User-entered:** Yes
+The application should keep user-facing labels distinct from the stored values used in the system.
 
-**Description:**
+Example:
 
-The person's height in centimeters.
+- friendly UI label: Manual
+- persisted value: manual
 
-Height is considered profile data because it normally changes rarely or not at all in adults.
+This keeps the data model explicit while allowing better user experience in the UI.
 
----
+## 11. Non-medical interpretation
 
-# 3. Measurement Metadata
-
-Metadata describes the circumstances of an individual measurement.
-
----
-
-## profile
-
-**Human-readable label:** Person
-
-**Category:** Measurement metadata
-
-**Source:** Application
-
-**Data type:** Relationship to profile
-
-**Unit:** None
-
-**Required:** Yes
-
-**User-entered:** Yes, through profile selection
-
-**Description:**
-
-Identifies which profile the measurement belongs to.
-
-The measurement should reference a profile rather than storing the person's name as plain text.
-
----
-
-## measured_at
-
-**Human-readable label:** Measurement date and time
-
-**Category:** Measurement metadata
-
-**Source:** User
-
-**Data type:** Date and time
-
-**Unit:** None
-
-**Required:** Yes
-
-**User-entered:** Yes
-
-**Description:**
-
-The date and optional time when the body measurements were taken.
-
-This field determines chronological ordering of measurements.
-
----
-
-## location
-
-**Human-readable label:** Location
-
-**Category:** Measurement metadata
-
-**Source:** User
-
-**Data type:** Relationship to location
-
-**Unit:** None
-
-**Required:** Yes
-
-**User-entered:** Yes
-
-**Description:**
-
-The place where the measurement was performed.
-
-Examples:
-
-```text
-Casa
-Colón
-Jesús
-```
-
-Locations should not be stored as unrestricted repeated text inside every measurement.
-
-The application should eventually use reusable location records so that values such as:
-
-```text
-Casa
-casa
-CASA
-```
-
-are not treated as different locations.
-
----
-
-## source
-
-**Human-readable label:** Measurement source
-
-**Category:** Measurement metadata
-
-**Source:** Application/User
-
-**Data type:** Enum-like value
-
-**Unit:** None
-
-**Required:** Yes
-
-**User-entered:** Usually no
-
-**Description:**
-
-Indicates how the measurement entered the system.
-
-Initial supported values:
-
-```text
-tanita
-manual
-import
-```
-
-Definitions:
-
-```text
-tanita
-```
-
-Measurement entered from current Tanita results.
-
-```text
-manual
-```
-
-Measurement entered manually without being associated with a Tanita reading.
-
-```text
-import
-```
-
-Historical measurement imported from Excel or another external source.
-
-Additional values may be added in the future.
-
----
-
-## notes
-
-**Human-readable label:** Notes
-
-**Category:** Measurement metadata
-
-**Source:** User
-
-**Data type:** Long text
-
-**Unit:** None
-
-**Required:** No
-
-**User-entered:** Yes
-
-**Description:**
-
-Optional comments about the measurement.
-
-Examples:
-
-```text
-Measured after swimming.
-```
-
-```text
-Different Tanita device used.
-```
-
+This application does not silently interpret Tanita outputs as medical advice or health labels. Numeric values are treated as data points for tracking over time, not as clinical diagnoses or health recommendations.
 ```text
 Morning measurement before breakfast.
 ```
