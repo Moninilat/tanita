@@ -1,14 +1,12 @@
 # Data model
 
-This document defines the domain data model for the Tanita tracker. It is primarily about what the application means and how it computes values, not about status tracking or implementation timelines.
-
-Implementation note: the current V1 schema is implemented in Supabase and reflects the Tanita RD-545HR measurement set plus manual circumference fields. The application stores raw observation data and calculates derived metrics from it.
+This document defines the domain semantics for the Tanita tracker. It describes the meaning of the data and how calculations should behave, without tracking implementation status or roadmap details.
 
 ## 1. General principles
 
 ### 1.1 Raw data vs derived data
 
-The application stores raw measurements whenever possible.
+The application stores raw observations whenever possible.
 
 Examples of raw values:
 
@@ -29,11 +27,11 @@ Examples:
 - change from first non-null measurement
 - change from previous non-null measurement
 
-This ensures historical edits and deletions automatically affect derived results.
+BMI is derived from weight_kg and profile height_cm; it is not a stored Tanita field.
 
 ### 1.2 Units and value conventions
 
-The application uses metric units internally.
+The application uses metric units internally:
 
 - mass and weight: kg
 - circumferences and height: cm
@@ -62,7 +60,7 @@ Example:
 2026-09-11T08:30:00
 ```
 
-The database allows multiple measurements on the same day. A measurement history is ordered by measured_at, with id as a stable tie-breaker when timestamps match.
+The database allows multiple measurements on the same day. Measurement history is ordered by measured_at with id as a deterministic tie-breaker when timestamps match.
 
 ### 1.4 Missing values
 
@@ -78,7 +76,7 @@ body_fat_pct = null
 waist_cm = null
 ```
 
-This semantics is important because a real value of zero is distinct from an unrecorded value.
+This distinction matters because a real value of zero is different from an unrecorded value.
 
 ### 1.5 Metric-specific change logic
 
@@ -103,9 +101,9 @@ For Measurement C:
 - previous weight = 59
 - previous body fat = 30
 
-This also applies to the first measurement: the comparison is to the first non-null value for that metric, not the first row in the table.
+This rule also applies to the first measurement: compare against the first non-null value for that metric, not the first row in the table.
 
-### 1.6 Percentage point deltas
+### 1.6 Percentage-point deltas
 
 Percentage-based metrics such as body fat and body water use percentage-point changes.
 
@@ -118,13 +116,13 @@ Do not calculate a relative percent change for these metrics.
 
 ### 1.7 No average weekly variation
 
-The application needs the following values for each relevant metric:
+The application needs, for each relevant metric:
 
 - current value
 - change since first measurement
 - change since previous measurement
 
-It does not calculate average weekly variation as a primary output.
+It does not calculate average weekly variation as a primary domain output.
 
 ## 2. Profile data
 
@@ -134,7 +132,7 @@ Profile data describes the person whose measurements are being tracked. These va
 
 - Type: text
 - Required: yes
-- Meaning: human-readable profile identifier such as Monique or Nick
+- Meaning: human-readable profile name such as Monique or Nick
 
 ### birth_date
 
@@ -163,26 +161,26 @@ Measurement metadata describes the context of a single recorded observation.
 
 - Type: timestamp with time zone
 - Required: yes
-- Meaning: timestamp of the measurement
+- Meaning: the timestamp of the measurement
 
 ### location_id
 
 - Type: relationship to locations
 - Required: yes
-- Meaning: the location where the measurement was taken
+- Meaning: the place where the measurement was taken
 
 ### entry_method
 
 - Type: enum-like persisted value
 - Required: yes
-- Supported values in V1: manual, import
+- Supported V1 values: manual, import
 - Meaning: how the measurement entered the application
 
 Notes:
 
 - manual means the measurement was entered manually, including values read from the Tanita RD-545HR
 - import means the record was imported from historical data such as Excel
-- entry_method is not a description of which body metrics are present within the row
+- entry_method is not a description of which body metrics are present in the row
 
 A single measurement may contain both Tanita values and manual circumference values while still using one entry_method.
 
@@ -208,7 +206,7 @@ The confirmed device is the Tanita RD-545HR. The V1 schema includes the followin
 - heart_rate_bpm
 - metabolic_age
 
-These are all stored as raw observations. The application derives certain additional values from them.
+These values are stored as raw observations. Derived values are calculated from them in application code.
 
 ## 5. Manual circumference fields
 
@@ -221,7 +219,7 @@ The V1 schema also includes manual circumference measurements:
 - hip_cm
 - thigh_cm
 
-These are user-entered circumference values and are nullable because a record may be incomplete.
+These are user-entered circumference values and are nullable because a measurement record may be incomplete.
 
 ## 6. Derived metrics
 
@@ -294,7 +292,7 @@ Example:
 - friendly UI label: Manual
 - persisted value: manual
 
-This keeps the data model explicit while allowing better user experience in the UI.
+This keeps the data model explicit while allowing a better user experience in the UI.
 
 ## 11. Non-medical interpretation
 

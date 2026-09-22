@@ -1,27 +1,19 @@
 # Tanita Body Metrics Tracker
 
-A single-repository body-composition tracking app for recording Tanita RD-545HR measurements and manual circumference values over time.
+A personal body-composition tracker for logging Tanita measurements and manual circumference values over time.
 
 ## What this project is
 
-The application tracks:
-
-- body metrics across time
-- multiple profiles and measurement locations
-- historical change analysis for each metric
-- raw measurement storage with derived calculations performed in the application layer
-
-The product is not a medical tool and does not assign health interpretation to Tanita values.
+The application keeps a history of body measurements and supports comparison across time. It focuses on raw data capture, clean historical ordering, and derived metric calculations based on that raw data.
 
 ## Stack
 
-- Next.js 16
+- Next.js
 - TypeScript
-- React 19
+- React
 - Tailwind CSS
 - Supabase PostgreSQL
 - Supabase CLI
-- Vercel for later deployment
 
 ## Architecture overview
 
@@ -31,72 +23,30 @@ This repository keeps the application in one place:
 Next.js + TypeScript
     |
     +-- UI
-    +-- server-side app logic
+    +-- server-side application logic
     +-- domain logic
     +-- Supabase access
     v
 Supabase PostgreSQL
 ```
 
-There is no separate Express or FastAPI backend in this repository. The frontend and backend application concerns live in the same Next.js project.
+The project intentionally uses a single repository rather than separate frontend and backend services.
 
-## Current development status
+## Setup
 
-The project is in active development and has already completed the initial V1 foundation:
-
-- requirements and domain model defined
-- project documentation created
-- initial Supabase schema created and published
-- profile, location, and measurement tables present in the remote project
-- initial migration already applied
-- Next.js initialized in the same repository
-- frontend/backend Supabase integration is still pending
-
-This project is not production-ready while RLS is disabled and authentication has not yet been implemented.
-
-## Repository structure
-
-```text
-.
-├── app/
-├── public/
-├── supabase/
-│   ├── config.toml
-│   └── migrations/
-│       └── 001_initial_schema.sql
-├── AGENTS.md
-├── CLAUDE.md
-├── DATA_MODEL.md
-├── DATABASE.md
-├── PROJECT.md
-├── README.md
-├── package.json
-├── package-lock.json
-├── tsconfig.json
-├── next.config.ts
-├── next-env.d.ts
-├── postcss.config.mjs
-├── eslint.config.mjs
-└── .gitignore
-```
-
-## Prerequisites
-
-Before running the project locally, install:
+### Prerequisites
 
 - Node.js
 - npm
 - the Supabase CLI
 
-You will also need a local or remote Supabase project that is configured for the repo.
-
-## Install
+### Install
 
 ```bash
 npm install
 ```
 
-## Run the app locally
+### Run locally
 
 ```bash
 npm run dev
@@ -104,9 +54,9 @@ npm run dev
 
 Then open http://localhost:3000.
 
-## Supabase CLI context
+## Supabase context
 
-This repository contains Supabase configuration and migrations under the supabase/ directory.
+This repository contains the Supabase configuration and migration files under the supabase directory.
 
 Common workflow:
 
@@ -116,55 +66,38 @@ supabase status
 supabase db push
 ```
 
-The project is already linked to the remote Supabase project and the initial migration has been applied.
-
-## Migrations
-
 The migration directory is:
 
 ```text
 supabase/migrations/
 ```
 
-The current migration is:
+The initial migration is:
 
 ```text
 supabase/migrations/001_initial_schema.sql
 ```
 
-Database changes should be made with new migrations. Do not modify an already-applied migration file in place.
+## Important security note
 
-## Applying migrations
+The current Supabase database has RLS disabled during local development. This is acceptable only during development and not in production.
 
-Use the Supabase CLI to apply schema changes:
-
-```bash
-supabase db push
-```
-
-If you are working with local development and need to inspect the database state, use the Supabase CLI and local tooling as appropriate.
-
-## Important security warning
-
-The current Supabase database has RLS disabled during development.
-
-This is acceptable only while the project is under active local development. The application is not production-ready until:
+The application is not production-ready until:
 
 - Supabase Auth is implemented
-- ownership and access rules are designed
+- access rules are designed
 - Row Level Security is enabled
-- explicit access policies are created
-- safe environment-variable handling is enforced
+- explicit policies are created
+- environment variables are handled safely
 
-Do not place service-role credentials, database passwords, private keys, or secret values in documentation or source files.
+Do not commit database passwords, private keys, or service-role credentials.
 
-## Documentation
-
-Key project documents:
+## Project documentation
 
 - [PROJECT.md](PROJECT.md)
 - [DATA_MODEL.md](DATA_MODEL.md)
 - [DATABASE.md](DATABASE.md)
 - [AGENTS.md](AGENTS.md)
+- [ROADMAP.md](ROADMAP.md)
 
-These files define the architecture, the domain model, the implemented V1 schema, and the engineering rules for working in the repository.
+This repo is intentionally documentation-light at the top level, and agent routing is handled by AGENTS.md instead of by requiring broad reads of every Markdown file.
