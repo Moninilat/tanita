@@ -60,29 +60,40 @@ function parseOptionalNumber(
   return number;
 }
 
-function validateNumericRules(
-  values: Record<MeasurementField, number | null>,
-  errors: string[],
-) {
+export type MeasurementValueError = {
+  field: MeasurementField;
+  message: string;
+};
+
+export function validateMeasurementValues(
+  values: Partial<Record<MeasurementField, number | null>>,
+): MeasurementValueError[] {
+  const errors: MeasurementValueError[] = [];
+
   positiveFields.forEach((field) => {
     const value = values[field];
-    if (value !== null && value <= 0) {
-      errors.push(`${field} must be greater than zero.`);
+    if (value != null && value <= 0) {
+      errors.push({ field, message: `${field} must be greater than zero.` });
     }
   });
 
   const percentageFields = ["body_fat_pct", "body_water_pct"] as const;
   percentageFields.forEach((field) => {
     const value = values[field];
-    if (value !== null && (value < 0 || value > 100)) {
-      errors.push(`${field} must be between 0 and 100.`);
+    if (value != null && (value < 0 || value > 100)) {
+      errors.push({ field, message: `${field} must be between 0 and 100.` });
     }
   });
 
   const visceralFat = values.visceral_fat_rating;
-  if (visceralFat !== null && (visceralFat < 1 || visceralFat > 59)) {
-    errors.push("visceral_fat_rating must be between 1 and 59.");
+  if (visceralFat != null && (visceralFat < 1 || visceralFat > 59)) {
+    errors.push({
+      field: "visceral_fat_rating",
+      message: "visceral_fat_rating must be between 1 and 59.",
+    });
   }
+
+  return errors;
 }
 
 function isValidDate(value: string): boolean {
@@ -112,6 +123,42 @@ export function combineMeasurementDateTime(date: string, time: string): string {
   return `${date}T${time || "12:00"}:00`;
 }
 
+export function buildMeasurementFormDefaults(
+  measurement: {
+    profile_id?: string | null;
+    location_id?: string | null;
+    measured_at?: string | null;
+    notes?: string | null;
+  } & Partial<Record<MeasurementField, number | null>>,
+): Record<string, string | number | null> {
+  const defaults: Record<string, string | number | null> = {
+    profile_id: measurement.profile_id ?? "",
+    location_id: measurement.location_id ?? "",
+    measurement_date: "",
+    measurement_time: "",
+    notes: measurement.notes ?? "",
+  };
+
+  if (measurement.measured_at) {
+    const timestamp = new Date(measurement.measured_at);
+    if (!Number.isNaN(timestamp.getTime())) {
+      const year = timestamp.getFullYear();
+      const month = String(timestamp.getMonth() + 1).padStart(2, "0");
+      const day = String(timestamp.getDate()).padStart(2, "0");
+      const hours = String(timestamp.getHours()).padStart(2, "0");
+      const minutes = String(timestamp.getMinutes()).padStart(2, "0");
+      defaults.measurement_date = `${year}-${month}-${day}`;
+      defaults.measurement_time = `${hours}:${minutes}`;
+    }
+  }
+
+  measurementFields.forEach((field) => {
+    defaults[field] = measurement[field] ?? "";
+  });
+
+  return defaults;
+}
+
 export function parseMeasurementForm(formData: FormData): MeasurementFormResult {
   const errors: string[] = [];
   const profileId = getText(formData, "profile_id");
@@ -139,7 +186,7 @@ export function parseMeasurementForm(formData: FormData): MeasurementFormResult 
     ]),
   ) as Record<MeasurementField, number | null>;
 
-  validateNumericRules(values, errors);
+  errors.push(...validateMeasurementValues(values).map((error) => error.message));
 
   if (Object.values(values).every((value) => value === null)) {
     errors.push("Enter at least one body measurement.");
