@@ -14,6 +14,10 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: createClientMock,
 }));
 
+vi.mock("@/lib/auth/server", () => ({
+  requireAuthenticatedUser: async () => ({ user: { id: "user-1" }, supabase: {} }),
+}));
+
 let existingMeasurements: Array<Record<string, unknown>> = [];
 let duplicateLookupFails = false;
 let insertionFails = false;

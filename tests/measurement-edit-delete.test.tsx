@@ -18,6 +18,13 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: createClientMock,
 }));
 
+vi.mock("@/lib/auth/server", () => ({
+  requireAuthenticatedUser: async () => ({
+    supabase: await createClientMock(),
+    user: { id: "user-1" },
+  }),
+}));
+
 const measurementRecord = {
   id: "m-1",
   profile_id: "p-1",
@@ -90,13 +97,15 @@ describe("measurement edit and delete user flow", () => {
     createClientMock.mockResolvedValue({
       from: vi.fn(() => ({
         update: () => ({
-          eq: async () => ({ error: null }),
+          eq: () => ({
+            select: () => ({ maybeSingle: async () => ({ data: { id: "550e8400-e29b-41d4-a716-446655440000" }, error: null }) }),
+          }),
         }),
       })),
     });
 
     const formData = new FormData();
-    formData.set("measurement_id", "m-1");
+    formData.set("measurement_id", "550e8400-e29b-41d4-a716-446655440000");
     formData.set("profile_id", "p-1");
     formData.set("location_id", "l-1");
     formData.set("measurement_date", "2026-09-25");
@@ -118,7 +127,9 @@ describe("measurement edit and delete user flow", () => {
               }),
             }),
             delete: () => ({
-              eq: async () => ({ error: null }),
+              eq: () => ({
+                select: () => ({ maybeSingle: async () => ({ data: { id: "550e8400-e29b-41d4-a716-446655440000" }, error: null }) }),
+              }),
             }),
           };
         }
@@ -128,7 +139,7 @@ describe("measurement edit and delete user flow", () => {
     });
 
     const formData = new FormData();
-    formData.set("measurement_id", "m-1");
+    formData.set("measurement_id", "550e8400-e29b-41d4-a716-446655440000");
 
     await expect(deleteMeasurement(formData)).rejects.toThrow("/measurements?profile=p-1");
   });

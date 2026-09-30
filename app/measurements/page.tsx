@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import SignOutButton from "@/components/auth/sign-out-button";
+import { requireAuthenticatedUser } from "@/lib/auth/server";
 import {
   buildMeasurementHistory,
   formatMeasurementDate,
@@ -14,7 +15,7 @@ export default async function MeasurementHistoryPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const supabase = await createClient();
+  const { supabase } = await requireAuthenticatedUser();
   const [{ data: profiles, error: profilesError }, { data: locations, error: locationsError }] =
     await Promise.all([
       supabase.from("profiles").select("id, name").order("name"),
@@ -76,6 +77,7 @@ export default async function MeasurementHistoryPage({
           <Link className="rounded bg-black px-4 py-2.5 text-center font-medium text-white" href="/">
             Dashboard
           </Link>
+          <SignOutButton />
         </nav>
       </header>
 

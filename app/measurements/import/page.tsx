@@ -1,6 +1,7 @@
 import Link from "next/link";
+import SignOutButton from "@/components/auth/sign-out-button";
 import ImportWizard from "@/components/measurements/import/import-wizard";
-import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export default async function MeasurementImportPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const supabase = await createClient();
+  const { supabase } = await requireAuthenticatedUser();
   const [{ data: profiles, error: profilesError }, { data: locations, error: locationsError }, params] =
     await Promise.all([
       supabase.from("profiles").select("id, name").order("name"),
@@ -55,6 +56,7 @@ export default async function MeasurementImportPage({
           <Link className="rounded bg-black px-4 py-2.5 text-center font-medium text-white" href="/">
             Dashboard
           </Link>
+          <SignOutButton />
         </nav>
       </header>
 

@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import SignOutButton from "@/components/auth/sign-out-button";
+import { requireAuthenticatedUser } from "@/lib/auth/server";
 import MetricCard from "@/components/dashboard/metric-card";
 import { summarizeDashboard } from "@/lib/dashboard/data";
 
@@ -11,7 +13,7 @@ export default async function Home({
 }: {
   searchParams: SearchParams;
 }) {
-  const supabase = await createClient();
+  const { supabase } = await requireAuthenticatedUser();
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
     .select("id, name")
@@ -52,9 +54,12 @@ export default async function Home({
           <h1 className="mt-2 text-3xl font-semibold">Dashboard</h1>
           {selectedProfile && <p className="mt-2 text-zinc-600">{selectedProfile.name}</p>}
         </div>
-        <a className="rounded bg-black px-4 py-2.5 text-center font-medium text-white" href="/measurements/new">
-          New measurement
-        </a>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Link className="rounded bg-black px-4 py-2.5 text-center font-medium text-white" href="/measurements/new">
+            New measurement
+          </Link>
+          <SignOutButton />
+        </div>
       </header>
 
       {profiles && profiles.length > 1 && (
@@ -75,7 +80,7 @@ export default async function Home({
         <section className="rounded border border-dashed border-zinc-300 p-8">
           <h2 className="text-xl font-semibold">No measurements yet.</h2>
           <p className="mt-2 text-zinc-600">Add the first measurement for {selectedProfile?.name ?? "this profile"}.</p>
-          <a className="mt-5 inline-block rounded bg-black px-4 py-2.5 font-medium text-white" href="/measurements/new">New measurement</a>
+          <Link className="mt-5 inline-block rounded bg-black px-4 py-2.5 font-medium text-white" href="/measurements/new">New measurement</Link>
         </section>
       ) : (
         <section aria-labelledby="metrics-heading">

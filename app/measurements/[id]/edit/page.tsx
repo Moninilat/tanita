@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import SignOutButton from "@/components/auth/sign-out-button";
+import { requireAuthenticatedUser } from "@/lib/auth/server";
 import { buildMeasurementFormDefaults } from "@/lib/measurements/validation";
 import MeasurementForm from "@/app/measurements/new/measurement-form";
 
@@ -11,7 +13,7 @@ type EditMeasurementPageProps = {
 
 export default async function EditMeasurementPage({ params }: EditMeasurementPageProps) {
   const { id } = await params;
-  const supabase = await createClient();
+  const { supabase } = await requireAuthenticatedUser();
 
   const [
     { data: profiles, error: profilesError },
@@ -29,7 +31,7 @@ export default async function EditMeasurementPage({ params }: EditMeasurementPag
       .maybeSingle(),
   ]);
 
-  if (profilesError || locationsError || measurementError) {
+  if (profilesError || locationsError) {
     return (
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-16">
         <h1 className="text-2xl font-semibold">Edit measurement</h1>
@@ -41,17 +43,7 @@ export default async function EditMeasurementPage({ params }: EditMeasurementPag
     );
   }
 
-  if (!measurement) {
-    return (
-      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-16">
-        <h1 className="text-2xl font-semibold">Edit measurement</h1>
-        <p role="alert">That measurement could not be found.</p>
-        <Link className="text-sm font-medium text-zinc-700 underline" href="/measurements">
-          Back to measurement history
-        </Link>
-      </main>
-    );
-  }
+  if (measurementError || !measurement) notFound();
 
   const selectedProfileExists = profiles?.some((profile) => profile.id === measurement.profile_id) ?? false;
   if (!selectedProfileExists) {
@@ -81,6 +73,7 @@ export default async function EditMeasurementPage({ params }: EditMeasurementPag
         >
           Back to history
         </Link>
+        <SignOutButton />
       </div>
 
       <MeasurementForm

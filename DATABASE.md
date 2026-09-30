@@ -166,20 +166,47 @@ The initial schema does not include direct columns for:
 
 These are derived values and must be calculated from raw observations.
 
+## Authentication ownership and RLS migration
+
+Forward migration `supabase/migrations/003_auth_ownership_policies.sql` defines the application ownership model:
+
+- `profiles.user_id` and `locations.user_id` are required foreign keys to `auth.users(id)` with `ON DELETE RESTRICT`.
+- Both owner columns default to `auth.uid()`; application inserts omit `user_id`.
+- Measurements do not store a second owner field. Their owner is derived through `profile_id`.
+- Measurement RLS requires both the related profile and location to be owned by `auth.uid()` for INSERT, UPDATE, and DELETE; SELECT is limited through the owned profile.
+- RLS is enabled and forced for all three public tables. `anon` and `PUBLIC` table privileges are revoked; `authenticated` receives SELECT, INSERT, UPDATE, and DELETE subject to the policies.
+- Profile/location account deletion is restricted while owned data remains. There is no in-app account deletion flow. An operator-owned account deletion procedure must delete that user's measurements first, then owned profiles and locations, then the Auth user, within a reviewed maintenance operation.
+
+Migration `002_rls_lockdown.sql` first revokes `anon`/`PUBLIC` table access and enables/forces RLS without adding policies. This is intentionally deny-all for both anonymous and authenticated operations, preventing exposure during cutover. Migration 003 does not edit the already-applied initial schema. In one transaction, it adds nullable owner columns, requires exactly one non-deleted Auth user when legacy profile/location rows need backfill, assigns existing rows to that unique account, verifies no owner is missing and no measurement joins differently-owned profile/location rows, then enforces NOT NULL, foreign keys, defaults, and owner policies. If there are zero or multiple candidate Auth users while legacy rows exist, migration 003 raises an exception and rolls back. It never picks an arbitrary account or exposes unowned rows.
+
+### Cutover procedure
+
+1. Back up the database and record profile, location, and measurement counts.
+2. Provision the designated initial owner through Supabase Auth; do not put credentials or the real user UUID in source control.
+4. Apply migration 002 immediately to revoke anonymous access and close all table access by RLS. This deny-all state is expected to block the application until ownership is finished.
+5. Confirm exactly one active Auth user exists before applying migration 003. If multiple accounts exist, use a reviewed operator-owned backfill rather than changing the migration to pick one.
+6. Apply migration 003 during a controlled cutover, then verify zero NULL owners, same-owner profile/location references, table grants, and RLS policies.
+7. Test direct Data API reads and mutations with two distinct users before reopening normal app use.
+
+### Current linked development status
+
+At the SPEC-009 cutover check, the linked development database initially had zero Auth users and existing legacy rows (1 profile, 1 location, 3 measurements). The designated initial owner was invited by email, then migration 003 was applied after the single Auth row existed. All three legacy rows are now assigned to that owner; the measured records join to a profile and location with the same owner. The invitation is awaiting email confirmation, so an interactive cookie-backed application read has not yet been verified. Migration 002 and 003 are recorded as applied; RLS is enabled and forced, anonymous table privileges are revoked, and all 12 owner policies are present.
+
+The automated two-user API integration suite requires a local Supabase stack and the test-only variables `LOCAL_SUPABASE_URL`, `LOCAL_SUPABASE_PUBLISHABLE_KEY`, and `LOCAL_SUPABASE_SERVICE_ROLE_KEY`. It refuses non-local URLs. Docker Desktop was unavailable during this cutover, so those integration tests have not yet run.
+
 ## Future schema decisions
 
-These are not implemented in the current V1 migration and should remain documented as future decisions:
+These are not implemented in the current V1 model and remain future decisions:
 
-- RLS ownership and access model
 - optional device metadata tracking
 - segmental Tanita metrics
 - historical height snapshots
 - future entry methods beyond manual and import
-- any additional metadata that becomes necessary for broader multi-user authorization or device management
+- sharing or organization ownership
 
 ## Current status
 
-The initial schema is already deployed and working in Supabase. Documentation should treat it as the current implementation, not as a proposed design waiting for migration.
+The initial schema is already deployed and working in Supabase. Migration 002 is the forward path for immediately locking down access; migration 003 adds authentication ownership and user policies after the designated initial Auth user is provisioned.
 
 ## Source of truth
 

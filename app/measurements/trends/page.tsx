@@ -1,10 +1,11 @@
 import Link from "next/link";
+import SignOutButton from "@/components/auth/sign-out-button";
+import { requireAuthenticatedUser } from "@/lib/auth/server";
 import MeasurementTrends from "@/components/measurements/measurement-trends";
 import {
   buildMeasurementTrends,
   resolveTrendProfileId,
 } from "@/lib/measurements/trends";
-import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export default async function MeasurementTrendsPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const supabase = await createClient();
+  const { supabase } = await requireAuthenticatedUser();
   const [{ data: profiles, error: profilesError }, params] = await Promise.all([
     supabase.from("profiles").select("id, name").order("name"),
     searchParams,
@@ -90,6 +91,7 @@ export default async function MeasurementTrendsPage({
           >
             Dashboard
           </Link>
+          <SignOutButton />
         </nav>
       </header>
 

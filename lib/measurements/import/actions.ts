@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireAuthenticatedUser } from "@/lib/auth/server";
 import { classifyImportDuplicates, summarizeImportRows } from "./duplicates";
 import { validateImportMapping } from "./mapping";
 import { ImportFileError, parseImportFile, previewCellValue } from "./parser";
@@ -163,6 +164,7 @@ function getValidatedRows(request: ImportRequest, locations: ImportLocation[]) {
 export async function inspectImportFile(
   formData: FormData,
 ): Promise<ImportActionResult<ImportInspection>> {
+  await requireAuthenticatedUser();
   const fileValue = formData.get("file");
   if (!isUploadedFile(fileValue)) {
     return { ok: false, message: "Choose a CSV or .xlsx file to continue." };
@@ -199,6 +201,7 @@ export async function inspectImportFile(
 export async function previewHistoricalImport(
   formData: FormData,
 ): Promise<ImportActionResult<ImportPreview>> {
+  await requireAuthenticatedUser();
   const requestResult = await readImportRequest(formData);
   if (!requestResult.ok) return requestResult;
   const request = requestResult.data;
@@ -243,6 +246,7 @@ function readNumberArray(formData: FormData, key: string): number[] | null {
 export async function commitHistoricalImport(
   formData: FormData,
 ): Promise<ImportActionResult<ImportResultSummary>> {
+  await requireAuthenticatedUser();
   const requestResult = await readImportRequest(formData);
   if (!requestResult.ok) return requestResult;
   const request = requestResult.data;
