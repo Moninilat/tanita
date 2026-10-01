@@ -83,7 +83,7 @@ export async function sendPasswordRecovery(
     error: null,
     success: "Check your email for a password recovery link.",
   };
-}
+} 
 
 export async function setInitialPassword(
   _previousState: PasswordSetupState,
