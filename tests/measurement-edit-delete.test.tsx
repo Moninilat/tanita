@@ -164,5 +164,47 @@ describe("measurement edit and delete user flow", () => {
     expect(html).toContain("Ava");
     expect(html).toContain("value=\"m-1\"");
     expect(html).toContain("/measurements?profile=p-1");
+    expect(html).toContain('aria-label="Primary navigation"');
+    expect(html).toContain('aria-current="location"');
+    expect(html).toContain("Import history");
+    expect(html).toContain("Sign out");
+  });
+
+  it("keeps primary navigation available when edit dependencies fail to load", async () => {
+    const errorClient = {
+      from: vi.fn((table: string) => {
+        if (table === "profiles" || table === "locations") {
+          return {
+            select: () => ({
+              order: async () => ({ data: null, error: new Error("query failed") }),
+            }),
+          };
+        }
+
+        if (table === "measurements") {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({ data: measurementRecord, error: null }),
+              }),
+            }),
+          };
+        }
+
+        throw new Error(`Unexpected table: ${table}`);
+      }),
+    };
+    createClientMock.mockResolvedValue(errorClient);
+
+    const html = renderToStaticMarkup(
+      await EditMeasurementPage({ params: Promise.resolve({ id: "m-1" }) }),
+    );
+
+    expect(html).toContain("This measurement could not be loaded.");
+    expect(html).toContain('aria-label="Primary navigation"');
+    expect(html).toContain("Dashboard");
+    expect(html).toContain("Import history");
+    expect(html).toContain("Sign out");
+    expect(html).not.toContain("/measurements?profile=p-1");
   });
 });

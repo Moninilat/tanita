@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import SignOutButton from "@/components/auth/sign-out-button";
+import PrimaryNavigation from "@/components/navigation/primary-navigation";
 import { requireAuthenticatedUser } from "@/lib/auth/server";
 import { buildMeasurementFormDefaults } from "@/lib/measurements/validation";
 import MeasurementForm from "@/app/measurements/new/measurement-form";
@@ -34,6 +34,7 @@ export default async function EditMeasurementPage({ params }: EditMeasurementPag
   if (profilesError || locationsError) {
     return (
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-16">
+        <PrimaryNavigation view="edit" />
         <h1 className="text-2xl font-semibold">Edit measurement</h1>
         <p role="alert">This measurement could not be loaded.</p>
         <Link className="text-sm font-medium text-zinc-700 underline" href="/measurements">
@@ -49,6 +50,7 @@ export default async function EditMeasurementPage({ params }: EditMeasurementPag
   if (!selectedProfileExists) {
     return (
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-16">
+        <PrimaryNavigation view="edit" />
         <h1 className="text-2xl font-semibold">Edit measurement</h1>
         <p role="alert">This measurement belongs to an unavailable profile.</p>
         <Link className="text-sm font-medium text-zinc-700 underline" href="/measurements">
@@ -62,18 +64,18 @@ export default async function EditMeasurementPage({ params }: EditMeasurementPag
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-12">
-      <div className="flex flex-col gap-4 border-b border-zinc-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-4 border-b border-zinc-200 pb-6">
         <div>
           <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">Edit</p>
           <h1 className="mt-2 text-3xl font-semibold">Edit measurement</h1>
         </div>
+        <PrimaryNavigation view="edit" profileId={measurement.profile_id} />
         <Link
           className="rounded border border-zinc-300 px-4 py-2.5 text-center font-medium text-zinc-700"
           href={`/measurements?profile=${measurement.profile_id}`}
         >
           Back to history
         </Link>
-        <SignOutButton />
       </div>
 
       <MeasurementForm

@@ -1,4 +1,4 @@
-import SignOutButton from "@/components/auth/sign-out-button";
+import PrimaryNavigation from "@/components/navigation/primary-navigation";
 import { requireAuthenticatedUser } from "@/lib/auth/server";
 import MeasurementForm from "./measurement-form";
 
@@ -15,6 +15,7 @@ export default async function NewMeasurementPage() {
   if (profilesError || locationsError) {
     return (
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-16">
+        <PrimaryNavigation view="new-measurement" />
         <h1 className="text-2xl font-semibold">New measurement</h1>
         <p role="alert">Profiles and locations could not be loaded.</p>
       </main>
@@ -23,12 +24,12 @@ export default async function NewMeasurementPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-12">
-      <header className="flex flex-col gap-4 border-b border-zinc-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-4 border-b border-zinc-200 pb-6">
         <div>
           <h1 className="text-3xl font-semibold">New measurement</h1>
           <p className="mt-2 text-zinc-600">Record an available Tanita or body measurement.</p>
         </div>
-        <SignOutButton />
+        <PrimaryNavigation view="new-measurement" />
       </header>
       <MeasurementForm profiles={profiles} locations={locations} />
     </main>

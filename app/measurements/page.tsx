@@ -1,5 +1,5 @@
 import Link from "next/link";
-import SignOutButton from "@/components/auth/sign-out-button";
+import PrimaryNavigation from "@/components/navigation/primary-navigation";
 import { requireAuthenticatedUser } from "@/lib/auth/server";
 import {
   buildMeasurementHistory,
@@ -43,6 +43,7 @@ export default async function MeasurementHistoryPage({
   if (profilesError || locationsError || measurementsError) {
     return (
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 px-6 py-16">
+        <PrimaryNavigation view="history" profileId={profileId} />
         <h1 className="text-2xl font-semibold">Measurement history</h1>
         <p role="alert">Measurement history could not be loaded.</p>
       </main>
@@ -55,30 +56,13 @@ export default async function MeasurementHistoryPage({
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-6 py-12">
-      <header className="flex flex-col gap-5 border-b border-zinc-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-5 border-b border-zinc-200 pb-6">
         <div>
           <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">History</p>
           <h1 className="mt-2 text-3xl font-semibold">Measurement history</h1>
           {selectedProfile && <p className="mt-2 text-zinc-600">{selectedProfile.name}</p>}
         </div>
-        <nav aria-label="Measurement navigation" className="flex flex-col gap-2 sm:flex-row">
-          <Link
-            className="rounded border border-zinc-300 px-4 py-2.5 text-center font-medium text-zinc-700"
-            href={profileId ? `/measurements/import?profile=${encodeURIComponent(profileId)}` : "/measurements/import"}
-          >
-            Import history
-          </Link>
-          <Link
-            className="rounded border border-zinc-300 px-4 py-2.5 text-center font-medium text-zinc-700"
-            href={profileId ? `/measurements/trends?profile=${encodeURIComponent(profileId)}` : "/measurements/trends"}
-          >
-            View trends
-          </Link>
-          <Link className="rounded bg-black px-4 py-2.5 text-center font-medium text-white" href="/">
-            Dashboard
-          </Link>
-          <SignOutButton />
-        </nav>
+        <PrimaryNavigation view="history" profileId={profileId} />
       </header>
 
       {profiles && profiles.length > 1 && (

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import SignOutButton from "@/components/auth/sign-out-button";
+import PrimaryNavigation from "@/components/navigation/primary-navigation";
 import { requireAuthenticatedUser } from "@/lib/auth/server";
 import MetricCard from "@/components/dashboard/metric-card";
 import { summarizeDashboard } from "@/lib/dashboard/data";
@@ -37,6 +37,7 @@ export default async function Home({
   if (profilesError || error) {
     return (
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-6 py-16">
+        <PrimaryNavigation view="dashboard" profileId={profileId} />
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <p role="alert">Dashboard data could not be loaded.</p>
       </main>
@@ -48,18 +49,13 @@ export default async function Home({
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-12">
-      <header className="flex flex-col gap-5 border-b border-zinc-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-5 border-b border-zinc-200 pb-6">
         <div>
           <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">Body metrics</p>
           <h1 className="mt-2 text-3xl font-semibold">Dashboard</h1>
           {selectedProfile && <p className="mt-2 text-zinc-600">{selectedProfile.name}</p>}
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Link className="rounded bg-black px-4 py-2.5 text-center font-medium text-white" href="/measurements/new">
-            New measurement
-          </Link>
-          <SignOutButton />
-        </div>
+        <PrimaryNavigation view="dashboard" profileId={profileId} />
       </header>
 
       {profiles && profiles.length > 1 && (

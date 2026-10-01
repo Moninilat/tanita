@@ -1,5 +1,4 @@
-import Link from "next/link";
-import SignOutButton from "@/components/auth/sign-out-button";
+import PrimaryNavigation from "@/components/navigation/primary-navigation";
 import ImportWizard from "@/components/measurements/import/import-wizard";
 import { requireAuthenticatedUser } from "@/lib/auth/server";
 
@@ -23,9 +22,9 @@ export default async function MeasurementImportPage({
   if (profilesError || locationsError) {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-6 py-12">
+        <PrimaryNavigation view="import" />
         <h1 className="text-3xl font-semibold">Import historical measurements</h1>
         <p role="alert">Profiles and locations could not be loaded. No measurements can be imported.</p>
-        <Link className="font-medium underline" href="/measurements">Back to measurement history</Link>
       </main>
     );
   }
@@ -41,7 +40,7 @@ export default async function MeasurementImportPage({
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-12">
-      <header className="flex flex-col gap-5 border-b border-zinc-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-5 border-b border-zinc-200 pb-6">
         <div>
           <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">Data entry</p>
           <h1 className="mt-2 text-3xl font-semibold">Import historical measurements</h1>
@@ -49,15 +48,7 @@ export default async function MeasurementImportPage({
             Map a CSV or Excel file, review every row, then import only selected valid measurements.
           </p>
         </div>
-        <nav aria-label="Measurement navigation" className="flex flex-col gap-2 sm:flex-row">
-          <Link className="rounded border border-zinc-300 px-4 py-2.5 text-center font-medium text-zinc-700" href="/measurements">
-            Measurement history
-          </Link>
-          <Link className="rounded bg-black px-4 py-2.5 text-center font-medium text-white" href="/">
-            Dashboard
-          </Link>
-          <SignOutButton />
-        </nav>
+        <PrimaryNavigation view="import" profileId={initialProfileId || null} />
       </header>
 
       {availableProfiles.length === 0 || availableLocations.length === 0 ? (

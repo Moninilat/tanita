@@ -1,5 +1,5 @@
 import Link from "next/link";
-import SignOutButton from "@/components/auth/sign-out-button";
+import PrimaryNavigation from "@/components/navigation/primary-navigation";
 import { requireAuthenticatedUser } from "@/lib/auth/server";
 import MeasurementTrends from "@/components/measurements/measurement-trends";
 import {
@@ -31,6 +31,7 @@ export default async function MeasurementTrendsPage({
   if (profilesError) {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-6 py-12">
+        <PrimaryNavigation view="trends" />
         <h1 className="text-3xl font-semibold">Measurement trends</h1>
         <p role="alert">Profiles could not be loaded. Please try again.</p>
         <Link className="font-medium text-zinc-700 underline" href="/measurements">
@@ -58,6 +59,7 @@ export default async function MeasurementTrendsPage({
   if (measurementsError) {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5 px-6 py-12">
+        <PrimaryNavigation view="trends" profileId={profileId} />
         <h1 className="text-3xl font-semibold">Measurement trends</h1>
         <p role="alert">Historical measurements could not be loaded.</p>
         <Link className="font-medium text-zinc-700 underline" href={historyUrl}>
@@ -72,27 +74,13 @@ export default async function MeasurementTrendsPage({
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-6 py-12">
-      <header className="flex flex-col gap-5 border-b border-zinc-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <header className="flex flex-col gap-5 border-b border-zinc-200 pb-6">
         <div>
           <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">History</p>
           <h1 className="mt-2 text-3xl font-semibold">Measurement trends</h1>
           {selectedProfile && <p className="mt-2 text-zinc-600">{selectedProfile.name}</p>}
         </div>
-        <nav aria-label="Measurement navigation" className="flex flex-col gap-2 sm:flex-row">
-          <Link
-            className="rounded border border-zinc-300 px-4 py-2.5 text-center font-medium text-zinc-700"
-            href={historyUrl}
-          >
-            Measurement history
-          </Link>
-          <Link
-            className="rounded bg-black px-4 py-2.5 text-center font-medium text-white"
-            href="/"
-          >
-            Dashboard
-          </Link>
-          <SignOutButton />
-        </nav>
+        <PrimaryNavigation view="trends" profileId={profileId} />
       </header>
 
       {availableProfiles.length > 1 && (
