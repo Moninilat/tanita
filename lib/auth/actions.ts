@@ -13,6 +13,11 @@ export type PasswordSetupState = {
   error: string | null;
 };
 
+export type PasswordRecoveryState = {
+  error: string | null;
+  success: string | null;
+};
+
 export async function signIn(
   _previousState: SignInState,
   formData: FormData,
@@ -42,6 +47,42 @@ export async function signOut(): Promise<never> {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/sign-in");
+}
+
+export async function sendPasswordRecovery(
+  _previousState: PasswordRecoveryState,
+  formData: FormData,
+): Promise<PasswordRecoveryState> {
+  const emailValue = formData.get("email");
+  const email = typeof emailValue === "string" ? emailValue.trim() : "";
+
+  if (!email) {
+    return {
+      error: "Enter your email address.",
+      success: null,
+    };
+  }
+
+  const supabase = await createClient();
+
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${siteUrl}/auth/callback`,
+  });
+
+  if (error) {
+    return {
+      error: "The password recovery email could not be sent.",
+      success: null,
+    };
+  }
+
+  return {
+    error: null,
+    success: "Check your email for a password recovery link.",
+  };
 }
 
 export async function setInitialPassword(
