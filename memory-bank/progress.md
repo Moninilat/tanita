@@ -26,6 +26,12 @@
 - invitation callback and password setup flows exist;
 - ownership-by-user policies are present for profiles, locations and measurements.
 
+### Cross-view navigation
+- shared primary navigation is implemented across dashboard, history, trends, import, new measurement and edit measurement views;
+- navigation destinations are centralized and preserve a validated profile on supported routes;
+- navigation retains the existing sign-out action and exposes the current view accessibly;
+- navigation and edit-flow tests pass; manual keyboard and narrow-viewport verification remains pending because an authenticated browser session was unavailable.
+
 ### Documentation layer
 - `AGENTS.md` is now a project entry point and rule index;
 - `.agents/rules/` contains the domain-specific normative rules.
@@ -42,5 +48,6 @@
 ## Known issues or caveats
 
 - auth/RLS integration tests remain environment-dependent on local Supabase variables;
+- SPEC-010 manual keyboard and narrow-viewport verification remains pending;
 - the project baseline currently uses code and tests as the final source of truth for implementation status;
 - documentation should be updated only when the code or operational state changes materially.
